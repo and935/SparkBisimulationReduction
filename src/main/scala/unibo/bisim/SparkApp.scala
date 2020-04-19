@@ -18,7 +18,6 @@ trait SparkApp extends KryoSerialization {
       .builder
       .appName("Spark Bisimulation Reduction")
       .config(conf)
-      .master("local[*]")
       .getOrCreate()
 
     setupLogging(spark)

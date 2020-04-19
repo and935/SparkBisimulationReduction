@@ -53,15 +53,15 @@ object SparkBisimulationApp extends SparkApp {
         options.output
       )
     } else {
-      val pathOut = options.input.split('/')
-      val path =pathOut(pathOut.length -1).split('.')(0) + "Block"
 
-      FileUtils.deleteDirectory(new File(path))
+      val pathOut = options.input + "BlockStates"
+
+      FileUtils.deleteDirectory(new File(pathOut))
       Lts.saveBlockStates(
         spark.sparkContext,
         stateSignatureReducedRDD,
         options.numPartitionCoalesced,
-        path
+        pathOut
       )
     }
   }
