@@ -14,14 +14,17 @@ object SparkBisimulationApp extends SparkApp {
     @ArgOption(name = "--input", usage = "Input file AUT containing the lts", required = true)
     var input: String = _
 
-    @ArgOption(name = "--output", usage = "Output file AUT for the lts reduced", required = false)
+    @ArgOption(name = "--output", usage = "Output file for the lts reduced", required = true)
     var output: String = _
+
+    @ArgOption(name = "--reduce", usage = "Flag for reduce the entire lts in an AUT file", required = false)
+    var reduce: Boolean = false
 
     @ArgOption(name = "--num-partition", usage = "number of partition for transition RDD", required = true)
     var numPartition: Int = 0
 
-    @ArgOption(name = "--num-partitionCoalesce", usage = "number of partition for stateSignatureRDD", required = true)
-    var numPartitionCoalesced: Int = 0
+    @ArgOption(name = "--num-partitionCoalesce", usage = "number of partition for stateSignatureRDD", required = false)
+    var numPartitionCoalesced: Int = numPartition/2
   }
 
   def run(args: Array[String], spark: SparkSession): Unit = {
@@ -29,13 +32,15 @@ object SparkBisimulationApp extends SparkApp {
     val options = new Options()
     new CmdLineParser(options).parseArgument(args: _*)
 
+    val sc = spark.sparkContext
+
     val lts = LtsBuilder.fromFile(
-      spark.sparkContext,
+      sc,
       options.input,
       options.numPartition
     )
 
-    val stateSignatureReducedRDD = Bisimulation.run(
+    val (keyDestTransition, stateSignatureReducedRDD) = Bisimulation.run(
       lts,
       StorageLevel.MEMORY_AND_DISK_SER,
       StorageLevel.MEMORY_AND_DISK_SER,
@@ -43,18 +48,20 @@ object SparkBisimulationApp extends SparkApp {
       options.numPartitionCoalesced
     )
 
-    if (options.output != null) {
+    if (options.reduce) {
       FileUtils.deleteDirectory(new File(options.output))
+
       Lts.saveReducedLts(
         spark.sparkContext,
-        lts,
+        keyDestTransition.values,
         stateSignatureReducedRDD,
+        lts.label,
         options.numPartitionCoalesced,
         options.output
       )
     } else {
-
-      val pathOut = options.input + "BlockStates"
+      keyDestTransition.unpersist()
+      val pathOut = s"${options.output}__ArrayBlock"
 
       FileUtils.deleteDirectory(new File(pathOut))
       Lts.saveBlockStates(

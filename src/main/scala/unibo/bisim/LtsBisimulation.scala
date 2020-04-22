@@ -165,8 +165,9 @@ object Lts {
    *
    */
   def saveReducedLts(sparkContext: SparkContext,
-                     lts: LtsBisimulation,
+                     transitionCompressedRDD: TransitionCompressedRDD,
                      stateSignatureRDD: StateSignatureRDD,
+                     labelRDD: RDD[(String, Long)],
                      numPartition: Int,
                      path: String
                     ): Unit = {
@@ -179,9 +180,9 @@ object Lts {
     //
     val reducedCompressedTransitionRDD = joinAndReplace(
       compressedStateSignatureRDD,
-      lts.transitionRDD)
+      transitionCompressedRDD)
     //
-    val reducedTransitionRDD = decompressTransition(sparkContext, reducedCompressedTransitionRDD, lts.label)
+    val reducedTransitionRDD = decompressTransition(sparkContext, reducedCompressedTransitionRDD, labelRDD)
     // saveOnFileText
     reducedTransitionRDD.coalesce(1, shuffle = true).saveAsTextFile(path)
   }

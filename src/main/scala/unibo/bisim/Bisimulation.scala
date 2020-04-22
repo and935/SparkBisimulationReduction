@@ -16,7 +16,7 @@ object Bisimulation extends Serializable {
   def signZip(preProcessedTransitionRDD: RDD[(StateId, TransitionCompressed)],
               stateSignatureRDD: StateSignatureRDD
              ): RDD[(StateId, (LabelId, Signature))] = {
-    preProcessedTransitionRDD.zipPartitions(stateSignatureRDD) (
+    preProcessedTransitionRDD.zipPartitions(stateSignatureRDD)(
       (iteratorTransition, iteratorStateSignature) => {
         val mapStateSignature = iteratorStateSignature.toMap
         for {
@@ -140,16 +140,15 @@ object Bisimulation extends Serializable {
     val transitionSignRDD = signZip(preProcessedTransitionRDD, stateSignatureRDD)
       .partitionBy(new HashPartitioner(numPartition))
 
-    stateSignatureRDD.unpersist()
     //RDD (state, newSignature)
     val newStateSignatureRDD = aggregate(transitionSignRDD, numPartition)
-      .persist(StorageLevel.MEMORY_AND_DISK_SER)
-
+      .persist(stateSignatureRDD.getStorageLevel)
 
     val blockIdRDD = LtsUtils.countBlockOccurrences(newStateSignatureRDD, numPartitionCoalesced)
     //number of blocks for the new signatures
     val newBlockCountUpdated = LtsUtils.countBlock(blockIdRDD)
 
+    stateSignatureRDD.unpersist()
     //reiterate
     refinement(
       preProcessedTransitionRDD,
@@ -166,7 +165,7 @@ object Bisimulation extends Serializable {
           storageLevelStates: StorageLevel,
           numPartition: Int,
           numPartitionCoalesced: Int
-         ): StateSignatureRDD = {
+         ): (RDD[(StateId, TransitionCompressed)], StateSignatureRDD) = {
     //RDD of compressed transition in the form (dstId, (srcId, labId, dstId))
     var preProcessedTransitionRDD: Option[RDD[(StateId, TransitionCompressed)]] = None
     //RDD (state, Signature)
@@ -213,7 +212,7 @@ object Bisimulation extends Serializable {
       numPartitionCoalesced
     )
 
-    reverseTransitionRDD.unpersist()
-    stateSignatureResultRDD
+    (reverseTransitionRDD,
+    stateSignatureResultRDD)
   }
 }

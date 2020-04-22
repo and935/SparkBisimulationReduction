@@ -23,7 +23,8 @@ trait KryoSerialization {
       classOf[Signature],
       classOf[(String, Int)],
       classOf[RDD[(StateId, (LabelId, Signature))]],
-      classOf[ArrayBuffer[(LabelId, Signature)]]
+      classOf[ArrayBuffer[(LabelId, Signature)]],
+      classOf[RDD[(StateId, ArrayBuffer[(LabelId, Signature)])]]
     ))
   }
 }
